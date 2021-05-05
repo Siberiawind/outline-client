@@ -35,15 +35,31 @@ ULONG GET_ADAPTERS_ADDRESSES_BUFFER_SIZE = 16384;
 PCWSTR FILTER_PROVIDER_NAME = L"Outline";
 PCWSTR SUBLAYER_NAME = L"Smart DNS Block";
 
+UINT64 MAX_TRIES = 3;
 UINT64 LOWER_FILTER_WEIGHT = 10;
 UINT64 HIGHER_FILTER_WEIGHT = 20;
 
 int main(int argc, char **argv) {
   // Lookup the interface index of outline-tap0.
-  PIP_ADAPTER_ADDRESSES adaptersAddresses =
-      (IP_ADAPTER_ADDRESSES *)malloc(GET_ADAPTERS_ADDRESSES_BUFFER_SIZE);
-  DWORD result = GetAdaptersAddresses(AF_INET, 0, NULL, adaptersAddresses,
-                                      &GET_ADAPTERS_ADDRESSES_BUFFER_SIZE);
+  PIP_ADAPTER_ADDRESSES adaptersAddresses = NULL;
+
+  UINT64 COUNT = 0;
+  DWORD result = 0;
+  do {
+    adaptersAddresses =
+      (IP_ADAPTER_ADDRESSES*)malloc(GET_ADAPTERS_ADDRESSES_BUFFER_SIZE);
+    result = GetAdaptersAddresses(AF_INET, 0, NULL, adaptersAddresses,
+      &GET_ADAPTERS_ADDRESSES_BUFFER_SIZE);
+    if (result != NO_ERROR) {
+      wcerr << "could not fetch network device list: " << result << endl;
+      free(adaptersAddresses);
+      adaptersAddresses = NULL;
+    }
+    else {
+      wcout << "fetch network device list success!";
+    }
+  } while ((result == ERROR_BUFFER_OVERFLOW) && (COUNT < MAX_TRIES));
+
   if (result != NO_ERROR) {
     wcerr << "could not fetch network device list: " << result << endl;
     return 1;
